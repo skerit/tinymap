@@ -150,9 +150,8 @@ class BlockDigger {
 						}
 					}
 				}
-				System.out.println(BlockDigger.this.world.getHeight());
-				System.out.println(BlockDigger.this.world.getBottomY());
-				Chunk unloadedChunkView = new UnloadedChunkView(sections,BlockDigger.this.world.getHeight(),BlockDigger.this.world.getBottomY());
+
+				Chunk unloadedChunkView = new UnloadedChunkView(sections);
 
 				NbtCompound heightmaps = level.getCompound("Heightmaps");
 				String heightmapName = Heightmap.Type.WORLD_SURFACE.getName();
