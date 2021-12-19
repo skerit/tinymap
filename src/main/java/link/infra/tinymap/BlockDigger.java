@@ -159,6 +159,7 @@ class BlockDigger {
 				}
 
 				NbtCompound level = chunkData.getCompound("Level");
+
 				NbtList sectionList = chunkData.getList("sections", 10);
 
 				int vertical_section_count = world.countVerticalSections();
