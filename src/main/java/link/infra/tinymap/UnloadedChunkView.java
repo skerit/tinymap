@@ -172,7 +172,7 @@ class UnloadedChunkView extends Chunk {
 
 	@Override
 	public ChunkStatus getStatus() {
-		return null;
+		return ChunkStatus.FULL;
 	}
 
 	@Override

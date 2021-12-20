@@ -27,6 +27,7 @@ import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.PalettedContainer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import net.minecraft.world.chunk.ChunkStatus;
 
 import java.io.File;
 import java.io.IOException;
@@ -159,6 +160,11 @@ class BlockDigger {
 				}
 
 				NbtCompound level = chunkData.getCompound("Level");
+
+				ChunkStatus status = ChunkStatus.byId(level.getString("Status"));
+				if (!status.isAtLeast(ChunkStatus.FULL)) {
+					return null;
+				}
 
 				NbtList sectionList = chunkData.getList("sections", 10);
 

@@ -13,6 +13,7 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkStatus;
 
 import javax.imageio.ImageIO;
 import link.infra.tinymap.BlockDigger.Session;
@@ -123,7 +124,7 @@ public class TileGenerator {
 			for (int chunkOffZ = 0; chunkOffZ < chunkSize; chunkOffZ++) {
 				Chunk chunk = digger.getChunkView(chunkOriginX + chunkOffX, chunkOriginZ + chunkOffZ);
 				ChunkPos chunkPos = new ChunkPos(chunkOriginX + chunkOffX, chunkOriginZ + chunkOffZ);
-				if (chunk == null) {
+				if (chunk == null || !chunk.getStatus().isAtLeast(ChunkStatus.FULL)) {
 					continue;
 				}
 				Heightmap chunkHeightmap = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE);
