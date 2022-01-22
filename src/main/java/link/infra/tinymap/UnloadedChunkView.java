@@ -38,11 +38,19 @@ class UnloadedChunkView extends Chunk {
 	private final ChunkSection[] sections;
 	private final World world;
 	private final Heightmap worldSurfaceHeightmap;
+	private int height;
+	private int bottomY;
 
 	UnloadedChunkView(ChunkSection[] sections, World world, ChunkPos pos) {
+		this(sections, world, pos, world.getHeight(), world.getBottomY());
+	}
+
+	UnloadedChunkView(ChunkSection[] sections, World world, ChunkPos pos, int height, int bottomY) {
 		super(pos, UpgradeData.NO_UPGRADE_DATA, world, world.getRegistryManager().get(Registry.BIOME_KEY), 0, null, null);
 		this.sections = sections;
 		this.world = world;
+		this.height = height;
+		this.bottomY = bottomY;
 		this.worldSurfaceHeightmap = new Heightmap(this, Heightmap.Type.WORLD_SURFACE);
 	}
 
@@ -270,13 +278,35 @@ class UnloadedChunkView extends Chunk {
 
 	}
 
+	@Nullable
+	public ChunkSection getHighestNonEmptySection() {
+
+		ChunkSection[] chunkSections = this.getSectionArray();
+
+		for (int i = chunkSections.length - 1; i >= 0; --i) {
+			ChunkSection chunkSection = chunkSections[i];
+			if (chunkSection == null || chunkSection.isEmpty()) continue;
+			return chunkSection;
+		}
+
+		return null;
+	}
+
+	public void setHeight(int height) {
+		this.height = height;
+	}
+
+	public void setBottomY(int bottomY) {
+		this.bottomY = bottomY;
+	}
+
 	@Override
 	public int getHeight() {
-		return this.world.getHeight();
+		return this.height;
 	}
 
 	@Override
 	public int getBottomY() {
-		return this.world.getBottomY();
+		return this.bottomY;
 	}
 }

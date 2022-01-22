@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import link.infra.tinymap.mixin.MinecraftServerAccessor;
+import link.infra.tinymap.mixin.PalettedContainerMixin;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -15,10 +16,9 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.world.ThreadedAnvilChunkStorage;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.registry.BuiltinRegistries;
 import net.minecraft.util.registry.Registry;
-import net.minecraft.world.ChunkSerializer;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeKeys;
@@ -159,23 +159,82 @@ class BlockDigger {
 					}
 				}
 
-				NbtCompound level = chunkData.getCompound("Level");
+				ChunkStatus status;
+				NbtCompound levelData = null;
+				String blockStatesKey;
+				String biomesKey;
 
-				ChunkStatus status = ChunkStatus.byId(chunkData.getString("Status"));
+				if (chunkData.contains("Level")) {
+					levelData = chunkData.getCompound("Level");
+					status = ChunkStatus.byId(levelData.getString("Status"));
+					blockStatesKey = "BlockStates";
+					biomesKey = "biomes-do-not-exist";
+				} else {
+					status = ChunkStatus.byId(chunkData.getString("Status"));
+					blockStatesKey = "block_states";
+					biomesKey = "biomes";
+				}
+
+				// Only allow fully-generated chunks
 				if (!status.isAtLeast(ChunkStatus.FULL)) {
 					return null;
 				}
 
-				NbtList sectionList = chunkData.getList("sections", 10);
+				NbtList sectionList;
+				boolean isPreV118 = false;
+
+				if (levelData != null) {
+					sectionList = levelData.getList("Sections", 10);
+					isPreV118 = true;
+				} else {
+					sectionList = chunkData.getList("sections", 10);
+				}
 
 				int vertical_section_count = world.countVerticalSections();
 
 				ChunkSection[] sections = new ChunkSection[vertical_section_count];
 
-				PalettedContainer<Biome> palettedContainer2;
-				Object palettedContainer;
+				PalettedContainer<Biome> biomePalette;
+				PalettedContainer<BlockState> blockStatePalette;
 				Registry<Biome> registry = world.getRegistryManager().get(Registry.BIOME_KEY);
 				Codec<PalettedContainer<Biome>> codec = createCodec(registry);
+
+				// Generate dummy sections under level 0
+				if (isPreV118) {
+					int y = -1;
+					int l;
+
+					while ((l = world.sectionCoordToIndex(y)) > -1) {
+
+						blockStatePalette = new PalettedContainer<>(
+								Block.STATE_IDS,
+								Blocks.AIR.getDefaultState(),
+								PalettedContainer.PaletteProvider.BLOCK_STATE
+						);
+
+						biomePalette = new PalettedContainer<>(registry, registry.getOrThrow(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
+
+						ChunkSection chunkSection = new ChunkSection(y, blockStatePalette, biomePalette);
+						sections[l] = chunkSection;
+
+						y--;
+					}
+
+					for (y = 16; y < 20; y++) {
+						l = world.sectionCoordToIndex(y);
+
+						blockStatePalette = new PalettedContainer<>(
+								Block.STATE_IDS,
+								Blocks.AIR.getDefaultState(),
+								PalettedContainer.PaletteProvider.BLOCK_STATE
+						);
+
+						biomePalette = new PalettedContainer<>(registry, registry.getOrThrow(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
+
+						ChunkSection chunkSection = new ChunkSection(y, blockStatePalette, biomePalette);
+						sections[l] = chunkSection;
+					}
+				}
 
 				for (int i = 0; i < sectionList.size(); ++i) {
 					NbtCompound sectionTag = sectionList.getCompound(i);
@@ -183,19 +242,53 @@ class BlockDigger {
 					int l = world.sectionCoordToIndex(y);
 
 					if (l >= 0 && l < sections.length) {
-						palettedContainer = sectionTag.contains("block_states", 10) ? (PalettedContainer)CODEC.parse(NbtOps.INSTANCE, sectionTag.getCompound("block_states")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
-						palettedContainer2 = sectionTag.contains("biomes", 10) ? (PalettedContainer)codec.parse(NbtOps.INSTANCE, sectionTag.getCompound("biomes")).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer<Biome>(registry, registry.getOrThrow(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
-						ChunkSection chunkSection = new ChunkSection(y, (PalettedContainer<BlockState>)palettedContainer, (PalettedContainer<Biome>)palettedContainer2);
+
+						if (isPreV118) {
+							blockStatePalette = new PalettedContainer<>(
+									Block.STATE_IDS,
+									Blocks.AIR.getDefaultState(),
+									PalettedContainer.PaletteProvider.BLOCK_STATE
+							);
+
+							NbtList palette = sectionTag.getList("Palette", 10);
+							int size = palette.size();
+
+							for (int pi = 0; pi < size; pi++) {
+								NbtCompound entry = palette.getCompound(pi);
+								Identifier blockId = Identifier.tryParse(entry.getString("Name"));
+
+								if (blockId != null) {
+									((PalettedContainerMixin<BlockState>) blockStatePalette).callSet(pi, Registry.BLOCK.get(blockId).getDefaultState());
+								}
+							}
+
+						} else {
+							blockStatePalette = sectionTag.contains(blockStatesKey, 10) ? (PalettedContainer)CODEC.parse(NbtOps.INSTANCE, sectionTag.getCompound(blockStatesKey)).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
+						}
+
+						biomePalette = sectionTag.contains(biomesKey, 10) ? codec.parse(NbtOps.INSTANCE, sectionTag.getCompound(biomesKey)).promotePartial(errorMessage -> logRecoverableError(pos, y, errorMessage)).getOrThrow(false, LOGGER::error) : new PalettedContainer<>(registry, registry.getOrThrow(BiomeKeys.PLAINS), PalettedContainer.PaletteProvider.BIOME);
+						ChunkSection chunkSection = new ChunkSection(y, blockStatePalette, biomePalette);
 						chunkSection.calculateCounts();
 						sections[l] = chunkSection;
 					}
 				}
 
-				Chunk unloadedChunkView = new UnloadedChunkView(sections, world, pos);
+				UnloadedChunkView unloadedChunkView;
 
-				NbtCompound heightmaps = level.getCompound("Heightmaps");
+				if (isPreV118) {
+					unloadedChunkView = new UnloadedChunkView(sections, world, pos, 256, 0);
+				} else {
+					unloadedChunkView = new UnloadedChunkView(sections, world, pos);
+				}
+
+				NbtCompound heightmaps = null;
+
+				if (levelData != null) {
+					heightmaps = levelData.getCompound("Heightmaps");
+				}
+
 				String heightmapName = Heightmap.Type.WORLD_SURFACE.getName();
-				if (heightmaps.contains(heightmapName, 12)) {
+				if (heightmaps != null && heightmaps.contains(heightmapName, 12)) {
 					unloadedChunkView.setHeightmap(Heightmap.Type.WORLD_SURFACE, heightmaps.getLongArray(heightmapName));
 				} else {
 					Heightmap.populateHeightmaps(unloadedChunkView, Collections.singleton(Heightmap.Type.WORLD_SURFACE));
