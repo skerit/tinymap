@@ -22,12 +22,37 @@ dependencies {
 	modImplementation "com.sun.activation:javax.activation:1.2.0"
 	include "com.sun.activation:javax.activation:1.2.0"
 
-	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
-	// You may need to force-disable transitiveness on them.
-
-	implementation "io.javalin:javalin:4.1.1" // TODO: package as published mod
 	implementation "org.apache.logging.log4j:log4j-slf4j-impl:2.17.0"
-	implementation "org.webjars.npm:leaflet:1.7.1" // TODO: package as mod + jar-in-jar
+
+	// All the required Javalin dependencies
+	implementation 'io.javalin:javalin:4.3.0'
+
+	include group: 'javax.servlet', name: 'javax.servlet-api', version: '4.0.1'
+	include "org.jetbrains.kotlin:kotlin-stdlib:1.6.10"
+	include 'io.javalin:javalin:4.3.0'
+
+	include 'org.eclipse.jetty:jetty-client:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-http:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-io:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-security:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-server:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-servlet:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-util:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-util-ajax:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-webapp:9.4.44.v20210927'
+	include 'org.eclipse.jetty:jetty-xml:9.4.44.v20210927'
+
+	include 'org.eclipse.jetty.websocket:websocket-api:9.4.44.v20210927'
+	include 'org.eclipse.jetty.websocket:websocket-client:9.4.44.v20210927'
+	include 'org.eclipse.jetty.websocket:websocket-common:9.4.44.v20210927'
+	include 'org.eclipse.jetty.websocket:websocket-server:9.4.44.v20210927'
+	include 'org.eclipse.jetty.websocket:websocket-servlet:9.4.44.v20210927'
+
+	include "org.webjars.npm:leaflet:1.7.1"
+}
+
+subprojects {
+	apply plugin: 'com.github.johnrengelman.shadow'
 }
 
 processResources {
