@@ -197,6 +197,7 @@ public class TileGenerator {
 					pos.setY(--height);
 					blockState = chunk.getBlockState(pos);
 				} while (blockState.getMapColor(world, pos) == MapColor.CLEAR && height > 0);
+
 			}
 		}
 
@@ -226,6 +227,7 @@ public class TileGenerator {
 			}
 
 			while ((!brokeThroughCeil || blockState.getMapColor(world, pos) == MapColor.CLEAR) && height > 0) {
+
 				pos.setY(--height);
 				blockState = chunk.getBlockState(pos);
 				if (blockState.isAir()) {
