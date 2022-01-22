@@ -161,7 +161,7 @@ class BlockDigger {
 
 				NbtCompound level = chunkData.getCompound("Level");
 
-				ChunkStatus status = ChunkStatus.byId(level.getString("Status"));
+				ChunkStatus status = ChunkStatus.byId(chunkData.getString("Status"));
 				if (!status.isAtLeast(ChunkStatus.FULL)) {
 					return null;
 				}
