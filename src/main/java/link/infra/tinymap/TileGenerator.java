@@ -140,7 +140,7 @@ public class TileGenerator {
 							searcher.calcWaterDepth(chunk);
 						}
 
-						MapColor matColor = searcher.blockState.getTopMaterialColor(world, searcher.pos);
+						MapColor matColor = searcher.blockState.getMapColor(world, searcher.pos);
 
 						int shade;
 
@@ -196,7 +196,7 @@ public class TileGenerator {
 				do {
 					pos.setY(--height);
 					blockState = chunk.getBlockState(pos);
-				} while (blockState.getTopMaterialColor(world, pos) == MapColor.CLEAR && height > 0);
+				} while (blockState.getMapColor(world, pos) == MapColor.CLEAR && height > 0);
 			}
 		}
 
@@ -225,7 +225,7 @@ public class TileGenerator {
 				brokeThroughCeil = true;
 			}
 
-			while ((!brokeThroughCeil || blockState.getTopMaterialColor(world, pos) == MapColor.CLEAR) && height > 0) {
+			while ((!brokeThroughCeil || blockState.getMapColor(world, pos) == MapColor.CLEAR) && height > 0) {
 				pos.setY(--height);
 				blockState = chunk.getBlockState(pos);
 				if (blockState.isAir()) {
